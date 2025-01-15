@@ -105,15 +105,14 @@ export default {
   display: flex;
   flex-direction: column;
   width: 300px;
-
-  h2 {
-    color: rgb(245, 217, 217);
-    font-family: "Montserrat", sans-serif;
-  }
-  p {
-    color: #fff;
-    margin: 7px;
-  }
+}
+h2 {
+  color: rgb(245, 217, 217);
+  font-family: "Montserrat", sans-serif;
+}
+p {
+  color: #fff;
+  margin: 7px;
 }
 
 /* Ajusta o posicionamento e o z-index da imagem sobreposta */

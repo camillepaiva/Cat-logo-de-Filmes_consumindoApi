@@ -52,8 +52,10 @@ export default {
         const response = await ApiFilmes.getMovieById(this.id);
         this.filme = response.data;
         this.loadingTrailer = false;
+        console.log(response.data);
       } catch (error) {
         this.loadingTrailer = false;
+
         console.error("Erro ao buscar filme:", error);
       }
     },
@@ -131,9 +133,9 @@ export default {
   border-radius: 20px;
   border: 1px solid red;
   padding: 3%;
+}
 
-  h2 {
-    color: red;
-  }
+h2 {
+  color: red;
 }
 </style>
