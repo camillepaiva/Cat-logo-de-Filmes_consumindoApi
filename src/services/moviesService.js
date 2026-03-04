@@ -3,6 +3,7 @@ import { categoryFromTmdbGenres } from "@/constants/movieCategories";
 
 const TMDB_API_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
+const LOCAL_MOVIES_ENDPOINT = "/movies.json";
 const FALLBACK_POSTER_URL = "https://placehold.co/500x750/0f172a/e2e8f0?text=Sem+Poster";
 const FALLBACK_BACKDROP_URL =
   "https://placehold.co/1280x720/0f172a/e2e8f0?text=Imagem+indisponivel";
@@ -22,6 +23,7 @@ const DISCOVER_PAGES = clampNumber(
 
 const moviesCache = new Map();
 const movieDetailsCache = new Map();
+const localMoviesCache = new Map();
 
 function getSanitizedEnvValue(value) {
   const trimmed = String(value ?? "").trim();
@@ -123,6 +125,79 @@ function normalizeMovie(movie) {
 
 function normalizeText(value) {
   return String(value ?? "").trim();
+}
+
+function hasTmdbCredentials() {
+  return Boolean(TMDB_READ_TOKEN || TMDB_API_KEY);
+}
+
+function normalizeLegacyCategory(category) {
+  const value = normalizeText(category).toUpperCase();
+
+  if (!value) {
+    return "OTHER";
+  }
+
+  const legacyToCurrent = {
+    SUSPENSE: "THRILLER",
+    TERROR: "HORROR",
+    DOCUMENTARIO: "DOCUMENTARY",
+    FICCAO_CIENTIFICA: "SCIENCE_FICTION",
+  };
+
+  return legacyToCurrent[value] ?? value;
+}
+
+function createDefaultMovieDetails() {
+  return {
+    tagline: "",
+    runtime: null,
+    status: "Disponivel no catalogo local",
+    originalTitle: "",
+    originalLanguage: "",
+    voteCount: 0,
+    popularity: 0,
+    budget: 0,
+    revenue: 0,
+    genres: [],
+    spokenLanguages: [],
+    productionCountries: [],
+    productionCompanies: [],
+    certification: "",
+    directors: [],
+    writers: [],
+    cast: [],
+    watchProviders: {
+      link: "",
+      flatrate: [],
+      rent: [],
+      buy: [],
+    },
+  };
+}
+
+function normalizeLocalMovie(movie, index) {
+  const title = normalizeText(movie.title) || "Titulo indisponivel";
+  const baseMovie = {
+    id: String(movie.id ?? index + 1),
+    title,
+    description:
+      normalizeText(movie.description) ||
+      "Descricao indisponivel para este filme.",
+    image: normalizeText(movie.image) || FALLBACK_POSTER_URL,
+    backdropImage: normalizeText(movie.backdropImage) || FALLBACK_BACKDROP_URL,
+    trailer: normalizeText(movie.trailer),
+    rating: normalizeRating(movie.rating),
+    category: normalizeLegacyCategory(movie.category),
+    releaseDate: normalizeTimestamp(movie.releaseDate ?? movie.release_date),
+  };
+
+  return {
+    ...baseMovie,
+    ...createDefaultMovieDetails(),
+    originalTitle: normalizeText(movie.originalTitle) || title,
+    originalLanguage: normalizeText(movie.originalLanguage).toUpperCase(),
+  };
 }
 
 function normalizeListNames(payload, valueGetter) {
@@ -413,36 +488,82 @@ async function getDiscoverMoviesPage(page) {
   return payload.results.map(normalizeMovie);
 }
 
+async function getLocalMovies({ forceRefresh = false } = {}) {
+  const cacheKey = "local";
+
+  if (localMoviesCache.has(cacheKey) && !forceRefresh) {
+    return localMoviesCache.get(cacheKey);
+  }
+
+  const response = await fetch(LOCAL_MOVIES_ENDPOINT);
+
+  if (!response.ok) {
+    throw new Error("Nao foi possivel carregar o catalogo local.");
+  }
+
+  const payload = await response.json();
+
+  if (!Array.isArray(payload)) {
+    throw new Error("Formato invalido do arquivo movies.json.");
+  }
+
+  const localMovies = payload.map(normalizeLocalMovie);
+  localMoviesCache.set(cacheKey, localMovies);
+  return localMovies;
+}
+
 export async function getMovies({ forceRefresh = false } = {}) {
+  if (!hasTmdbCredentials()) {
+    return getLocalMovies({ forceRefresh });
+  }
+
   const cacheKey = `${DEFAULT_LANGUAGE}:${DEFAULT_REGION}:${DISCOVER_PAGES}`;
 
   if (moviesCache.has(cacheKey) && !forceRefresh) {
     return moviesCache.get(cacheKey);
   }
 
-  const pageIndexes = Array.from({ length: DISCOVER_PAGES }, (_value, index) => index + 1);
-  const pages = await Promise.all(pageIndexes.map((page) => getDiscoverMoviesPage(page)));
+  try {
+    const pageIndexes = Array.from(
+      { length: DISCOVER_PAGES },
+      (_value, index) => index + 1,
+    );
+    const pages = await Promise.all(pageIndexes.map((page) => getDiscoverMoviesPage(page)));
 
-  const mergedMovies = [];
-  const seenIds = new Set();
+    const mergedMovies = [];
+    const seenIds = new Set();
 
-  for (const page of pages) {
-    for (const movie of page) {
-      if (seenIds.has(movie.id)) {
-        continue;
+    for (const page of pages) {
+      for (const movie of page) {
+        if (seenIds.has(movie.id)) {
+          continue;
+        }
+
+        seenIds.add(movie.id);
+        mergedMovies.push(movie);
       }
-
-      seenIds.add(movie.id);
-      mergedMovies.push(movie);
     }
-  }
 
-  moviesCache.set(cacheKey, mergedMovies);
-  return mergedMovies;
+    moviesCache.set(cacheKey, mergedMovies);
+    return mergedMovies;
+  } catch (error) {
+    const fallbackMovies = await getLocalMovies({ forceRefresh }).catch(() => null);
+
+    if (fallbackMovies?.length) {
+      return fallbackMovies;
+    }
+
+    throw error;
+  }
 }
 
 export async function getMovieById(id, options = {}) {
   const normalizedId = String(id);
+
+  if (!hasTmdbCredentials()) {
+    const localMovies = await getLocalMovies(options);
+    return localMovies.find((movie) => movie.id === normalizedId) ?? null;
+  }
 
   if (movieDetailsCache.has(normalizedId) && !options.forceRefresh) {
     return movieDetailsCache.get(normalizedId);
@@ -460,6 +581,12 @@ export async function getMovieById(id, options = {}) {
   } catch (error) {
     if (error?.status === 404) {
       return null;
+    }
+
+    const localMovies = await getLocalMovies(options).catch(() => null);
+
+    if (localMovies) {
+      return localMovies.find((movie) => movie.id === normalizedId) ?? null;
     }
 
     throw error;

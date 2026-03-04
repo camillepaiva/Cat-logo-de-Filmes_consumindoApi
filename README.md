@@ -54,3 +54,14 @@ src/
 ## Observacoes
 - Este projeto usa TMDB, mas nao e endossado ou certificado pelo TMDB.
 - Favoritos continuam locais, salvos em `localStorage`.
+- Se as credenciais TMDB nao estiverem configuradas no ambiente, o app usa fallback automatico para `public/movies.json`.
+
+## Deploy na Vercel
+Para usar TMDB em producao, configure variaveis no painel da Vercel:
+1. Projeto na Vercel -> `Settings` -> `Environment Variables`.
+2. Adicione:
+   - `VUE_APP_TMDB_API_READ_TOKEN` (ou `VUE_APP_TMDB_API_KEY`)
+   - `VUE_APP_TMDB_LANGUAGE`
+   - `VUE_APP_TMDB_REGION`
+   - `VUE_APP_TMDB_DISCOVER_PAGES`
+3. Clique em `Redeploy` para rebuild com as envs novas.
