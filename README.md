@@ -1,25 +1,25 @@
 # Catalogo de Filmes (Vue 3 + TMDB)
 
-Projeto refatorado com foco em arquitetura limpa, componentizacao e integracao com API real.
+Projeto refatorado com foco em arquitetura limpa, componentizacao e integracao com API real da TMDB com proxy serverless na Vercel.
 
 ## Stack
 - Vue 3 (Composition API)
 - Vue Router 4
 - Vue CLI 5
-- TMDB API v3 (autenticacao com token v4 read access)
+- TMDB API (via proxy serverless em `api/tmdb`)
 
-## Configuracao
+## Configuracao local
 1. Copie `.env.example` para `.env.local`.
-2. Gere seu token em https://www.themoviedb.org/settings/api.
-3. Preencha `VUE_APP_TMDB_API_READ_TOKEN` (ou `VUE_APP_TMDB_API_KEY`) em `.env.local`.
+2. Para rodar apenas com fallback local (`public/movies.json`), nao precisa de credenciais.
+3. Para usar TMDB localmente com `npm run serve`, preencha `VUE_APP_TMDB_API_READ_TOKEN` ou `VUE_APP_TMDB_API_KEY`.
 
-Exemplo:
+Exemplo local:
 ```env
-VUE_APP_TMDB_API_READ_TOKEN=seu_token_tmdb
-VUE_APP_TMDB_API_KEY=sua_chave_tmdb_opcional
+VUE_APP_TMDB_PROXY_BASE=/api/tmdb
 VUE_APP_TMDB_LANGUAGE=pt-BR
 VUE_APP_TMDB_REGION=BR
 VUE_APP_TMDB_DISCOVER_PAGES=3
+VUE_APP_TMDB_API_KEY=sua_chave_tmdb_opcional
 ```
 
 ## Scripts
@@ -32,36 +32,38 @@ npm run build
 
 ## Estrutura do projeto
 ```text
+api/
+  tmdb/[...path].js      # proxy serverless para TMDB (Vercel)
 src/
   assets/styles/         # tema global e design tokens
   components/            # componentes reutilizaveis de UI
   components/base/       # blocos base (loader/empty state)
   composables/           # estado compartilhado e regras de negocio
   constants/             # dicionarios e enums simples
-  services/              # acesso a API TMDB e normalizacao de dados
+  services/              # acesso ao proxy TMDB e normalizacao de dados
   utils/                 # funcoes puras (data, youtube)
   views/                 # paginas (lista, detalhes, 404)
   router.js              # configuracao de rotas
 ```
 
-## O que a integracao com TMDB faz
-- Lista de filmes via `/discover/movie` com cache local em memoria.
-- Detalhes por filme via `/movie/{id}`.
-- Trailer oficial por `append_to_response=videos` e selecao automatica do melhor video YouTube.
-- Normalizacao de dados para formato unico no frontend.
-- Tratamento de erro com mensagens amigaveis.
+## Integracao TMDB
+- Lista de filmes via `/discover/movie`.
+- Detalhes por filme via `/movie/{id}` com `append_to_response`.
+- Trailer oficial (YouTube), elenco, classificacao, provedores e dados tecnicos.
+- Fallback automatico para `public/movies.json` se API/proxy estiver indisponivel.
+
+## Deploy na Vercel (recomendado)
+Configure variaveis **no backend da Vercel** (sem prefixo `VUE_APP_`):
+1. Projeto na Vercel -> `Settings` -> `Environment Variables`.
+2. Adicione:
+   - `TMDB_API_READ_TOKEN` (ou `TMDB_API_KEY`)
+   - `VUE_APP_TMDB_PROXY_BASE=/api/tmdb`
+   - `VUE_APP_TMDB_LANGUAGE=pt-BR`
+   - `VUE_APP_TMDB_REGION=BR`
+   - `VUE_APP_TMDB_DISCOVER_PAGES=3`
+3. Clique em `Redeploy`.
 
 ## Observacoes
 - Este projeto usa TMDB, mas nao e endossado ou certificado pelo TMDB.
 - Favoritos continuam locais, salvos em `localStorage`.
-- Se as credenciais TMDB nao estiverem configuradas no ambiente, o app usa fallback automatico para `public/movies.json`.
-
-## Deploy na Vercel
-Para usar TMDB em producao, configure variaveis no painel da Vercel:
-1. Projeto na Vercel -> `Settings` -> `Environment Variables`.
-2. Adicione:
-   - `VUE_APP_TMDB_API_READ_TOKEN` (ou `VUE_APP_TMDB_API_KEY`)
-   - `VUE_APP_TMDB_LANGUAGE`
-   - `VUE_APP_TMDB_REGION`
-   - `VUE_APP_TMDB_DISCOVER_PAGES`
-3. Clique em `Redeploy` para rebuild com as envs novas.
+- Nunca commite credenciais reais em arquivos versionados.

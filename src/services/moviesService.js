@@ -3,6 +3,8 @@ import { categoryFromTmdbGenres } from "@/constants/movieCategories";
 
 const TMDB_API_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
+const TMDB_PROXY_BASE =
+  getSanitizedEnvValue(process.env.VUE_APP_TMDB_PROXY_BASE) || "/api/tmdb";
 const LOCAL_MOVIES_ENDPOINT = "/movies.json";
 const FALLBACK_POSTER_URL = "https://placehold.co/500x750/0f172a/e2e8f0?text=Sem+Poster";
 const FALLBACK_BACKDROP_URL =
@@ -43,6 +45,10 @@ function getSanitizedEnvValue(value) {
   }
 
   return trimmed;
+}
+
+function hasDirectTmdbCredentials() {
+  return Boolean(TMDB_READ_TOKEN || TMDB_API_KEY);
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -125,10 +131,6 @@ function normalizeMovie(movie) {
 
 function normalizeText(value) {
   return String(value ?? "").trim();
-}
-
-function hasTmdbCredentials() {
-  return Boolean(TMDB_READ_TOKEN || TMDB_API_KEY);
 }
 
 function normalizeLegacyCategory(category) {
@@ -409,22 +411,87 @@ function withErrorStatus(message, status) {
   return error;
 }
 
-function ensureTmdbCredentials() {
-  if (!TMDB_READ_TOKEN && !TMDB_API_KEY) {
+function buildQueryString(params) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => query.append(key, String(item)));
+      return;
+    }
+
+    query.set(key, String(value));
+  });
+
+  return query.toString();
+}
+
+function createDefaultQueryParams(params = {}) {
+  return {
+    language: DEFAULT_LANGUAGE,
+    region: DEFAULT_REGION,
+    ...params,
+  };
+}
+
+async function parseTmdbResponse(response, defaultMessage) {
+  const text = await response.text();
+  let payload = null;
+
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch (_error) {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      payload?.status_message ||
+      payload?.error ||
+      defaultMessage ||
+      "Falha ao consultar a API do TMDB.";
+
+    throw withErrorStatus(message, response.status);
+  }
+
+  return payload ?? {};
+}
+
+async function requestTmdbViaProxy(path, params = {}) {
+  const normalizedBase = TMDB_PROXY_BASE.replace(/\/+$/, "");
+  const normalizedPath = String(path).replace(/^\/+/, "");
+  const queryString = buildQueryString(params);
+  const requestUrl = queryString
+    ? `${normalizedBase}/${normalizedPath}?${queryString}`
+    : `${normalizedBase}/${normalizedPath}`;
+
+  const response = await fetch(requestUrl, {
+    headers: {
+      accept: "application/json",
+    },
+  });
+
+  return parseTmdbResponse(response, "Falha ao consultar o proxy TMDB.");
+}
+
+function ensureDirectTmdbCredentials() {
+  if (!hasDirectTmdbCredentials()) {
     throw new Error(
-      "Configure VUE_APP_TMDB_API_READ_TOKEN ou VUE_APP_TMDB_API_KEY para consumir a API do TMDB.",
+      "Configure VUE_APP_TMDB_API_READ_TOKEN ou VUE_APP_TMDB_API_KEY para consumir a API do TMDB localmente.",
     );
   }
 }
 
-async function requestTmdb(path, params = {}) {
-  ensureTmdbCredentials();
+async function requestTmdbDirect(path, params = {}) {
+  ensureDirectTmdbCredentials();
 
   const buildUrl = (useBearerToken) => {
     const url = new URL(`${TMDB_API_BASE_URL}${path}`);
     const queryParams = {
-      language: DEFAULT_LANGUAGE,
-      region: DEFAULT_REGION,
       ...(useBearerToken ? {} : { api_key: TMDB_API_KEY }),
       ...params,
     };
@@ -453,23 +520,35 @@ async function requestTmdb(path, params = {}) {
     response = await fetchWithAuthMode(false);
   }
 
-  if (!response.ok) {
-    let message = "Falha ao consultar a API do TMDB.";
+  return parseTmdbResponse(response, "Falha ao consultar a API do TMDB.");
+}
 
+async function requestTmdb(path, params = {}) {
+  const normalizedPath = String(path).replace(/^\/+/, "");
+  const queryParams = createDefaultQueryParams(params);
+  let lastError = null;
+
+  if (TMDB_PROXY_BASE) {
     try {
-      const payload = await response.json();
-
-      if (payload?.status_message) {
-        message = payload.status_message;
-      }
-    } catch (_error) {
-      // Keep default message when body is unavailable.
+      return await requestTmdbViaProxy(normalizedPath, queryParams);
+    } catch (error) {
+      lastError = error;
     }
-
-    throw withErrorStatus(message, response.status);
   }
 
-  return response.json();
+  if (hasDirectTmdbCredentials()) {
+    try {
+      return await requestTmdbDirect(`/${normalizedPath}`, queryParams);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  throw new Error("Nao foi possivel consultar o catalogo remoto.");
 }
 
 async function getDiscoverMoviesPage(page) {
@@ -513,10 +592,6 @@ async function getLocalMovies({ forceRefresh = false } = {}) {
 }
 
 export async function getMovies({ forceRefresh = false } = {}) {
-  if (!hasTmdbCredentials()) {
-    return getLocalMovies({ forceRefresh });
-  }
-
   const cacheKey = `${DEFAULT_LANGUAGE}:${DEFAULT_REGION}:${DISCOVER_PAGES}`;
 
   if (moviesCache.has(cacheKey) && !forceRefresh) {
@@ -560,11 +635,6 @@ export async function getMovies({ forceRefresh = false } = {}) {
 export async function getMovieById(id, options = {}) {
   const normalizedId = String(id);
 
-  if (!hasTmdbCredentials()) {
-    const localMovies = await getLocalMovies(options);
-    return localMovies.find((movie) => movie.id === normalizedId) ?? null;
-  }
-
   if (movieDetailsCache.has(normalizedId) && !options.forceRefresh) {
     return movieDetailsCache.get(normalizedId);
   }
@@ -579,14 +649,14 @@ export async function getMovieById(id, options = {}) {
     movieDetailsCache.set(normalizedId, movie);
     return movie;
   } catch (error) {
-    if (error?.status === 404) {
-      return null;
-    }
-
     const localMovies = await getLocalMovies(options).catch(() => null);
 
     if (localMovies) {
       return localMovies.find((movie) => movie.id === normalizedId) ?? null;
+    }
+
+    if (error?.status === 404) {
+      return null;
     }
 
     throw error;
