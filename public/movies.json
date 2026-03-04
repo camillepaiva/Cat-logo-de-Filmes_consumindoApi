@@ -1,0 +1,92 @@
+[
+  {
+    "id": "1",
+    "image": "https://br.web.img3.acsta.net/pictures/17/04/19/21/08/577190.jpg",
+    "title": "Corra!",
+    "description": "Um jovem visita a familia da namorada e encontra um plano perturbador.",
+    "releaseDate": 1490918400000,
+    "rating": 8,
+    "trailer": "https://youtu.be/mDGV5UucTu8?si=zc-ywhAPqLp1oe2f",
+    "category": "SUSPENSE"
+  },
+  {
+    "id": "2",
+    "image": "https://cdn.culturagenial.com/imagens/0013923-0-cke.jpg?class=article",
+    "title": "Infiltrado na Klan",
+    "description": "Um policial se infiltra na Ku Klux Klan para investigar crimes racistas.",
+    "releaseDate": 1533859200000,
+    "rating": 9,
+    "trailer": "https://youtu.be/bbOJwWSEUmo?si=AUdg0W5TyHTw8959",
+    "category": "DRAMA"
+  },
+  {
+    "id": "3",
+    "image": "https://cdn.culturagenial.com/imagens/parasita-cartaz-cke.jpg",
+    "title": "Parasita",
+    "description": "Uma familia pobre se aproxima de uma familia rica e muda tudo.",
+    "releaseDate": 1572393600000,
+    "rating": 10,
+    "trailer": "https://youtu.be/xFCrQy5IXI0?si=CXQhD2DQ4T9pcDLo",
+    "category": "DRAMA"
+  },
+  {
+    "id": "4",
+    "image": "https://br.web.img2.acsta.net/c_310_420/medias/nmedia/18/87/81/22/19961797.jpg",
+    "title": "O Hospedeiro",
+    "description": "Um monstro surge no rio Han e uma familia corre para salvar uma crianca.",
+    "releaseDate": 1153526400000,
+    "rating": 8,
+    "trailer": "https://youtu.be/HzqQVsgQu9g?si=SMot0ON4kpzHobl_",
+    "category": "TERROR"
+  },
+  {
+    "id": "5",
+    "image": "https://www.themoviedb.org/t/p/original/9HmrSXXZTHnRt46poimF0mMe7rS.jpg",
+    "title": "Oldboy",
+    "description": "Apos 15 anos de cativeiro, um homem tenta descobrir quem arruinou sua vida.",
+    "releaseDate": 1066953600000,
+    "rating": 9,
+    "trailer": "https://youtu.be/tAaBkFChaRg?si=SOxYKsiDxFq5LiGn",
+    "category": "SUSPENSE"
+  },
+  {
+    "id": "6",
+    "image": "https://www.claquete.com/fotos/filmes/poster/8200_medio.jpg",
+    "title": "Estrelas Alem do Tempo",
+    "description": "Tres matematicas da NASA ajudam na corrida espacial enquanto enfrentam racismo.",
+    "releaseDate": 1483142400000,
+    "rating": 8,
+    "trailer": "https://youtu.be/wx3PVtrU-Os?si=y-V8nfotEjzVpzsj",
+    "category": "DRAMA"
+  },
+  {
+    "id": "7",
+    "image": "https://image.tmdb.org/t/p/w1280/tAcDOFX0WludQhvTdmG2rDxyQRM.jpg",
+    "title": "Homem de Ferro",
+    "description": "Tony Stark cria uma armadura e vira um heroi apos escapar do cativeiro.",
+    "releaseDate": 1209686400000,
+    "rating": 9,
+    "trailer": "https://youtu.be/aKkud2sqd1o?si=cSmV4NbhVTgj8My6",
+    "category": "FICCAO_CIENTIFICA"
+  },
+  {
+    "id": "8",
+    "image": "https://ingresso-a.akamaihd.net/b2b/production/uploads/movie/poster/97/vingadores.jpg",
+    "title": "Vingadores: Ultimato",
+    "description": "Os herois restantes tentam reverter a destruicao causada por Thanos.",
+    "releaseDate": 1556150400000,
+    "rating": 8,
+    "trailer": "https://youtu.be/PgrmbRID0eY?si=5kzOpWQh-zXMYkCX",
+    "category": "FICCAO_CIENTIFICA"
+  },
+  {
+    "id": "9",
+    "image": "https://upload.wikimedia.org/wikipedia/pt/thumb/e/ee/Transformers-poster.jpg/250px-Transformers-poster.jpg",
+    "title": "Transformers",
+    "description": "Autobots e Decepticons levam uma guerra milenar ate a Terra.",
+    "releaseDate": 1183593600000,
+    "rating": 7,
+    "trailer": "https://youtu.be/CbX_SIz_9fk?si=wlCgsj3RNiRlf9E7",
+    "category": "FICCAO_CIENTIFICA"
+  }
+]
